@@ -372,8 +372,13 @@ class OrdersManager {
             <td class="table-cell"><input type="text" class="input-box w-full player-set"></td>
             <td class="table-cell"><input type="text" class="input-box w-full host-set"></td>
             <td class="table-cell">
-                <div class="handle cursor-move hover:text-primary transition-colors">
-                    <i class="fas fa-grip-vertical"></i>
+                <div class="flex gap-2 justify-center">
+                    <div class="handle cursor-move hover:text-primary transition-colors">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <button class="delete-row hover:text-red-500 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </td>
         `;
@@ -404,9 +409,17 @@ class OrdersManager {
     setupRowListeners(row) {
         const playerInput = row.querySelector('.player-set');
         const hostInput = row.querySelector('.host-set');
+        const deleteButton = row.querySelector('.delete-row');
         
         playerInput.addEventListener('input', () => this.updateOrders());
         hostInput.addEventListener('input', () => this.updateOrders());
+        
+        if (deleteButton) {
+            deleteButton.addEventListener('click', () => {
+                row.remove();
+                this.updateHeights();
+            });
+        }
     }
 
     // Warning: returns in current transformation type

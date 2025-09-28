@@ -119,32 +119,11 @@ def get_edge(ev, rounds):
     return (Decimal(1) - (Decimal(ev) ** Decimal(rounds))) 
 
 
-if __name__ == '__main__':
-    exclusive_upper_bound = 37 # Roulette goes from 0 to 36
+# example usage 
 
-    reme_player_order = make_reme_player_order(exclusive_upper_bound)
-    reme_host_order = make_reme_host_order(exclusive_upper_bound)
-
-    jeme_player_order = make_jeme_player_order(exclusive_upper_bound)
-    jeme_host_order = make_jeme_host_order(exclusive_upper_bound)
-
-    leme_player_order = make_leme_player_order(exclusive_upper_bound)
-    leme_host_order = make_leme_host_order(exclusive_upper_bound)
-
-    print(reme_player_order)
-    print(reme_host_order)
-    print(jeme_player_order)
-    print(jeme_host_order)
-    print(leme_player_order)
-    print(leme_host_order)
-    print("--")
-
-    reme_ev = get_ev(reme_player_order, reme_host_order, get_reme_weight, exclusive_upper_bound)
-    jeme_ev = get_ev(jeme_player_order, jeme_host_order, get_jeme_weight, exclusive_upper_bound)
-    leme_ev = get_ev(leme_player_order, leme_host_order, get_leme_weight, exclusive_upper_bound)
-
-    for r in [1, 2, 4]:
-        print(f"({r}r REME) house edge: {round(get_edge(reme_ev, r) * 100, 2)}%")
-        print(f"({r}r JEME) house edge: {round(get_edge(jeme_ev, r) * 100, 2)}%")
-        print(f"({r}r LEME) house edge: {round(get_edge(leme_ev, r) * 100, 2)}%")
+# if __name__ == '__main__':
+#     exclusive_upper_bound = 37 # Roulette goes from 0 to 36
+#     reme_player_order = make_reme_player_order(exclusive_upper_bound)
+#     reme_host_order = make_reme_host_order(exclusive_upper_bound)
+#     print(f"({r}r REME) house edge: {round(get_edge(reme_ev, r) * 100, 2)}%")
 

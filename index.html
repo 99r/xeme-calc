@@ -11,8 +11,12 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#6366f1',
-                        secondary: '#8b5cf6',
+                        darker: '#050505',
+                        gray: {
+                            750: '#232323',
+                            850: '#1a1a1a',
+                            950: '#0a0a0a',
+                        }
                     },
                 },
             },
@@ -22,22 +26,22 @@
     <style type="text/tailwindcss">
         @layer components {
             .btn {
-                @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 
-                       dark:text-white hover:opacity-90 focus:outline-none focus:ring-2 
-                       focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary;
+                @apply px-3 py-1.5 rounded font-medium transition-colors duration-150 
+                       text-gray-100 hover:opacity-90 focus:outline-none focus:ring-1 
+                       focus:ring-offset-1 focus:ring-offset-gray-900 focus:ring-gray-600;
             }
             .btn-primary {
-                @apply bg-primary hover:bg-primary/90;
+                @apply bg-gray-700 hover:bg-gray-600;
             }
             .btn-secondary {
-                @apply bg-secondary hover:bg-secondary/90;
+                @apply bg-gray-800 hover:bg-gray-700;
             }
             .input-box {
-                @apply bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 
-                       text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary;
+                @apply bg-black border border-gray-850 rounded px-2 py-1.5 
+                       text-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-750;
             }
             .table-cell {
-                @apply p-2 border border-gray-700;
+                @apply p-1.5 border border-gray-850;
             }
         }
         @layer base {
@@ -52,12 +56,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-6xl">
-        <h1 class="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-primary to-secondary 
-                   text-transparent bg-clip-text">Xeme Calculator</h1>
+<body class="bg-darker text-gray-200 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <h1 class="text-3xl font-bold mb-6 text-gray-100">Xeme Calculator</h1>
         
-        <div class="mb-8 flex gap-4 items-center justify-between flex-wrap">
+        <div class="mb-6 flex gap-4 items-center justify-between flex-wrap">
             <div class="flex gap-4 items-center flex-wrap">
                 <div class="flex gap-4 items-center">
                     <label for="game-type" class="font-medium">Game:</label>
@@ -72,8 +75,6 @@
                     <span class="font-medium">Status:</span>
                     <span id="preset-status" class="px-2 py-1 rounded text-sm"></span>
                 </div>
-            </div>
-            <div class="mt-4">
                 <button id="share-config" class="btn bg-gray-700 hover:bg-gray-600">
                     <i class="fas fa-share-alt mr-2"></i>Share Configuration
                 </button>
@@ -93,25 +94,25 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2">
-                <div class="bg-gray-800 rounded-xl p-6 shadow-xl">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-semibold">Orders</h2>
+                <div class="bg-black rounded p-4 shadow-lg border border-gray-850">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-xl font-semibold text-gray-100">Orders</h2>
                         <div class="flex gap-2">
                             <button id="add-row-top" class="btn btn-secondary">
-                                <i class="fas fa-plus mr-2"></i>Add Top
+                                <i class="fas fa-plus mr-1"></i>Add Top
                             </button>
                             <button id="add-row-bottom" class="btn btn-secondary">
-                                <i class="fas fa-plus mr-2"></i>Add Bottom
+                                <i class="fas fa-plus mr-1"></i>Add Bottom
                             </button>
                         </div>
                     </div>
                     
                     <div class="overflow-x-auto">
-                        <table id="orders-table" class="w-full border-collapse border border-gray-700">
+                        <table id="orders-table" class="w-full border-collapse border border-gray-850">
                             <thead>
-                                <tr class="bg-gray-700">
+                                <tr class="bg-gray-850">
                                     <th class="table-cell">Height</th>
                                     <th class="table-cell">Player Order</th>
                                     <th class="table-cell">Host Order</th>
@@ -125,18 +126,17 @@
             </div>
 
             <div class="lg:col-span-1">
-                <div class="bg-gray-800 rounded-xl p-6 shadow-xl mb-8">
-                    <h2 class="text-2xl font-semibold mb-4">Weights</h2>
-                    <div class="mb-4">
-                        <label class="block mb-2">Default Weight:</label>
+                <div class="bg-black rounded p-4 shadow-lg border border-gray-850 mb-6">
+                    <h2 class="text-xl font-semibold mb-3 text-gray-100">Weights</h2>
+                    <div class="mb-3">
+                        <label class="block mb-1.5">Default Weight:</label>
                         <input type="number" id="default-weight" value="2" step="any"
                                class="input-box w-full text-center">
-                    </div>
                     <div>
                         <h3 class="text-lg font-medium mb-2">Exceptions</h3>
-                        <table id="weights-table" class="w-full border-collapse border border-gray-700">
+                        <table id="weights-table" class="w-full border-collapse border border-gray-850">
                             <thead>
-                                <tr class="bg-gray-700">
+                                <tr class="bg-gray-850">
                                     <th class="table-cell">Number</th>
                                     <th class="table-cell">Weight</th>
                                     <th class="table-cell w-10"></th>
@@ -147,17 +147,17 @@
                     </div>
                 </div>
 
-                <div class="bg-gray-800 rounded-xl p-6 shadow-xl">
-                    <h2 class="text-2xl font-semibold mb-4">Results</h2>
+                <div class="bg-black rounded p-4 shadow-lg border border-gray-850">
+                    <h2 class="text-xl font-semibold mb-3 text-gray-100">Results</h2>
                     
-                    <div class="mb-6">
-                        <label for="rounds-slider" class="block mb-2">Rounds:</label>
-                        <div class="flex gap-4 items-center">
+                    <div class="mb-4">
+                        <label for="rounds-slider" class="block mb-1.5">Rounds:</label>
+                        <div class="flex gap-3 items-center">
                             <input type="range" id="rounds-slider" min="1" max="4" value="1" 
-                                   class="w-full h-2 rounded-lg appearance-none cursor-pointer 
-                                   bg-gray-700" />
+                                   class="w-full h-1.5 rounded appearance-none cursor-pointer 
+                                   bg-gray-800" />
                             <input type="number" id="rounds-input" min="1" value="1" 
-                                   class="input-box w-20" />
+                                   class="input-box w-16" />
                         </div>
                     </div>
 

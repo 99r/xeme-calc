@@ -195,11 +195,8 @@ class WeightManager {
     }
 
     setWeight(transformedValue, weight) {
-        if (weight === this.defaultWeight) {
-            this.weights.delete(transformedValue);
-        } else {
-            this.weights.set(transformedValue, weight);
-        }
+        // Always set the weight, even if it equals the default
+        this.weights.set(transformedValue, weight);
         this.checkPresetMatch();
     }
 
@@ -232,37 +229,102 @@ class WeightManager {
         this.checkPresetMatch();
     }
 
+    // Check if two orders are equivalent by checking if each layer contains the same numbers
+    // regardless of their order in the array or within each set
+    areOrdersEquivalent(order1, order2) {
+        if (!order1 || !order2 || order1.length !== order2.length) return false;
+
+        // Convert both orders to arrays of arrays of numbers, sorted for comparison
+        const normalized1 = order1.map(set => Array.from(set).sort((a, b) => a - b));
+        const normalized2 = order2.map(set => Array.from(set).sort((a, b) => a - b));
+        
+        // Sort each level by its first number (or any other consistent criteria)
+        // This handles the case where levels might be in different orders but contain the same sets
+        const sortLevel = arr => arr.sort((a, b) => {
+            // Empty arrays go first
+            if (a.length === 0) return -1;
+            if (b.length === 0) return 1;
+            // Then sort by first number
+            return a[0] - b[0];
+        });
+
+        normalized1.sort((a, b) => a[0] - b[0]);
+        normalized2.sort((a, b) => a[0] - b[0]);
+
+        // Now compare the normalized arrays
+        return normalized1.every((nums, i) => {
+            const otherNums = normalized2[i];
+            if (nums.length !== otherNums.length) return false;
+            return nums.every((num, j) => num === otherNums[j]);
+        });
+    }
+
+    areWeightsEqual(weights1, weights2) {
+        if (weights1.size !== weights2.size) return false;
+        return Array.from(weights1.keys()).every(key => 
+            weights1.get(key) === weights2.get(key)
+        );
+    }
+
     checkPresetMatch() {
         const status = document.getElementById('preset-status');
         if (!status) return;
-
+        
+        // Early returns for obvious non-matches
         if (this.defaultWeight !== 2) {
-            status.textContent = 'Custom';
-            status.className = 'px-2 py-1 rounded text-sm bg-gray-600';
+            this.setStatus(status, 'Custom');
             return;
         }
 
-        // TODO: Make this check actually check contents of orders and weights instead of just gaslighting with size
-        const remeMatch = this.weights.size === 1 && 
-            this.weights.get(0) === 3 && !this.weights.has(1);
-        const jemeMatch = this.weights.size === 2 && 
-            this.weights.get(0) === 5 && this.weights.get(1) === 4;
-        const lemeMatch = this.weights.size === 2 && 
-            this.weights.get(0) === 4 && this.weights.get(1) === 3;
-
-        if (remeMatch) {
-            status.textContent = 'REME';
-            status.className = 'px-2 py-1 rounded text-sm bg-green-600';
-        } else if (jemeMatch) {
-            status.textContent = 'JEME';
-            status.className = 'px-2 py-1 rounded text-sm bg-green-600';
-        } else if (lemeMatch) {
-            status.textContent = 'LEME';
-            status.className = 'px-2 py-1 rounded text-sm bg-green-600';
-        } else {
-            status.textContent = 'Custom';
-            status.className = 'px-2 py-1 rounded text-sm bg-gray-600';
+        const ordersManager = window.ordersManager;
+        if (!ordersManager || !ordersManager.playerOrder || !ordersManager.hostOrder) {
+            this.setStatus(status, 'Custom');
+            return;
         }
+
+        // Check against each preset in order, short-circuiting as soon as we find a match
+        // Only calculate player/host orders if weights match first
+        
+        // REME check
+        if (this.areWeightsEqual(this.weights, new Map([[0, 3]]))) {
+            const remePlayer = makeRemePlayerOrder(BOUND);
+            const remeHost = makeRemeHostOrder(BOUND);
+            if (this.areOrdersEquivalent(ordersManager.playerOrder, remePlayer) &&
+                this.areOrdersEquivalent(ordersManager.hostOrder, remeHost)) {
+                this.setStatus(status, 'REME');
+                return;
+            }
+        }
+
+        // JEME check
+        if (this.areWeightsEqual(this.weights, new Map([[0, 5], [1, 4]]))) {
+            const jemePlayer = makeJemePlayerOrder(BOUND);
+            const jemeHost = makeJemeHostOrder(BOUND);
+            if (this.areOrdersEquivalent(ordersManager.playerOrder, jemePlayer) &&
+                this.areOrdersEquivalent(ordersManager.hostOrder, jemeHost)) {
+                this.setStatus(status, 'JEME');
+                return;
+            }
+        }
+
+        // LEME check
+        if (this.areWeightsEqual(this.weights, new Map([[0, 4], [1, 3]]))) {
+            const lemePlayer = makeLemePlayerOrder(BOUND);
+            const lemeHost = makeLemeHostOrder(BOUND);
+            if (this.areOrdersEquivalent(ordersManager.playerOrder, lemePlayer) &&
+                this.areOrdersEquivalent(ordersManager.hostOrder, lemeHost)) {
+                this.setStatus(status, 'LEME');
+                return;
+            }
+        }
+
+        // If no matches found
+        this.setStatus(status, 'Custom');
+    }
+
+    setStatus(status, type) {
+        status.textContent = type;
+        status.className = `px-2 py-1 rounded text-sm ${type === 'Custom' ? 'bg-gray-600' : 'bg-green-600'}`;
     }
 
     getConfiguration() {
@@ -532,46 +594,91 @@ class WeightsTable {
         this.render();
     }
 
+    createWeightRow(value, weight, isNew = false) {
+        const tr = document.createElement('tr');
+        tr.className = 'transition-colors hover:bg-gray-700/50';
+        
+        tr.innerHTML = `
+            <td class="table-cell">
+                <input type="number" value="${value}" min="0" max="9" step="1"
+                       class="input-box w-full text-center value-input"
+                       ${!isNew ? 'readonly' : ''}>
+            </td>
+            <td class="table-cell">
+                <input type="number" value="${weight}" step="any"
+                       class="input-box w-full text-center weight-input">
+            </td>
+            <td class="table-cell text-center">
+                <button class="text-red-500 hover:text-red-400 transition-colors delete-weight">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        `;
+        
+        const valueInput = tr.querySelector('.value-input');
+        const weightInput = tr.querySelector('.weight-input');
+        const deleteBtn = tr.querySelector('.delete-weight');
+        
+        // Preserve focus state
+        let isFocused = false;
+        weightInput.addEventListener('focus', () => { isFocused = true; });
+        weightInput.addEventListener('blur', () => { isFocused = false; });
+        
+        const updateWeight = () => {
+            const newValue = parseInt(valueInput.value);
+            const newWeight = weightInput.value === '' ? this.weightManager.defaultWeight 
+                                                     : parseFloat(weightInput.value);
+            
+            if (!isNaN(newValue) && newValue >= 0 && newValue <= 9) {
+                // Only update if the value actually changed
+                    this.weightManager.setWeight(newValue, newWeight);
+                    this.onWeightsChanged();
+            }
+        };
+        
+        valueInput.addEventListener('input', updateWeight);
+        weightInput.addEventListener('input', () => {
+            updateWeight();
+            // Don't re-render if the weight is empty/default and this is a preset row
+           
+                this.render();
+                // if (isFocused) {
+                //     tr.querySelector('.weight-input').focus();
+                // }
+        });
+        
+        deleteBtn.addEventListener('click', () => {
+            tr.remove();
+            this.onWeightsChanged();
+        });
+        
+        return tr;
+    }
+
+    getHighestValue() {
+        let max = -1;
+        this.tbody.querySelectorAll('.value-input').forEach(input => {
+            const value = parseInt(input.value);
+            if (!isNaN(value)) {
+                max = Math.max(max, value);
+            }
+        });
+        return max;
+    }
+
     render() {
+        // Clear the entire table
         this.tbody.innerHTML = '';
+
+        // Add rows for weights from the weight manager
         for (const [value, weight] of this.weightManager.weights.entries()) {
-            const tr = document.createElement('tr');
-            tr.className = 'transition-colors hover:bg-gray-700/50';
-            
-            tr.innerHTML = `
-                <td class="table-cell text-center">${value}</td>
-                <td class="table-cell">
-                    <input type="number" value="${weight}" step="any"
-                            class="input-box w-full text-center weight-input" 
-                            data-value="${value}">
-                </td>
-                <td class="table-cell text-center">
-                    <button class="text-red-500 hover:text-red-400 transition-colors delete-weight">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </td>
-            `;
-            
-            const input = tr.querySelector('.weight-input');
-            input.addEventListener('input', () => {
-                const newWeight = parseFloat(input.value) || this.weightManager.defaultWeight;
-                this.weightManager.setWeight(value, newWeight);
-                this.render();
-                this.onWeightsChanged();
-            });
-            
-            const deleteBtn = tr.querySelector('.delete-weight');
-            deleteBtn.addEventListener('click', () => {
-                this.weightManager.setWeight(value, this.weightManager.defaultWeight);
-                this.render();
-                this.onWeightsChanged();
-            });
-            
-            this.tbody.appendChild(tr);
+            const row = this.createWeightRow(value, weight, false);
+            this.tbody.appendChild(row);
         }
 
-        // Add option to add new weight
+        // Add single "Add Extra Weight" row at the bottom
         const addRow = document.createElement('tr');
+        addRow.className = 'add-weight-row';  // Add a class for easy identification
         addRow.innerHTML = `
             <td colspan="3" class="table-cell text-center">
                 <button class="text-primary hover:text-primary/80 transition-colors">
@@ -581,50 +688,9 @@ class WeightsTable {
         `;
         
         addRow.querySelector('button').addEventListener('click', () => {
-            const tr = document.createElement('tr');
-            tr.className = 'transition-colors hover:bg-gray-700/50';
-            
-            tr.innerHTML = `
-                <td class="table-cell">
-                    <input type="number" value="0" min="0" max="9" step="1"
-                           class="input-box w-full text-center value-input">
-                </td>
-                <td class="table-cell">
-                    <input type="number" value="${this.weightManager.defaultWeight}" step="any"
-                           class="input-box w-full text-center weight-input">
-                </td>
-                <td class="table-cell text-center">
-                    <button class="text-red-500 hover:text-red-400 transition-colors delete-weight">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </td>
-            `;
-            
-            const valueInput = tr.querySelector('.value-input');
-            const weightInput = tr.querySelector('.weight-input');
-            const deleteBtn = tr.querySelector('.delete-weight');
-            
-            const updateWeight = () => {
-                const value = parseInt(valueInput.value);
-                const weight = parseFloat(weightInput.value) || this.weightManager.defaultWeight;
-                if (!isNaN(value) && value >= 0 && value <= 9) {
-                    this.weightManager.weights.set(value, weight);
-                    this.onWeightsChanged();
-                }
-            };
-            
-            valueInput.addEventListener('input', updateWeight);
-            weightInput.addEventListener('input', updateWeight);
-            deleteBtn.addEventListener('click', () => {
-                tr.remove();
-                const value = parseInt(valueInput.value);
-                if (!isNaN(value)) {
-                    this.weightManager.weights.delete(value);
-                }
-                this.onWeightsChanged();
-            });
-            
-            this.tbody.insertBefore(tr, addRow);
+            const nextValue = Math.min(9, this.getHighestValue() + 1);
+            const row = this.createWeightRow(nextValue, this.weightManager.defaultWeight, true);
+            this.tbody.insertBefore(row, addRow);
         });
         
         this.tbody.appendChild(addRow);
@@ -632,6 +698,9 @@ class WeightsTable {
 
     onWeightsChanged = () => {
         // This will be set from outside
+        if (window.weightManager) {
+            window.weightManager.checkPresetMatch();
+        }
     }
 }
 

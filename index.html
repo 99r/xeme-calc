@@ -40,6 +40,16 @@
                 @apply p-2 border border-gray-700;
             }
         }
+        @layer base {
+            input[type="number"]::-webkit-inner-spin-button,
+            input[type="number"]::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+            input[type=number] {
+                -moz-appearance: textfield;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen">
@@ -73,7 +83,7 @@
                 <label for="transform-type" class="font-medium">Mode:</label>
                 <select id="transform-type" class="input-box">
                     <option value="xeme">Xeme</option>
-                    <option value="qq">QQ</option>
+                    <option value="qq" disabled>QQ</option>
                 </select>
                 <label for="display-type" class="font-medium">Display:</label>
                 <select id="display-type" class="input-box">
@@ -119,7 +129,7 @@
                     <h2 class="text-2xl font-semibold mb-4">Weights</h2>
                     <div class="mb-4">
                         <label class="block mb-2">Default Weight:</label>
-                        <input type="number" id="default-weight" value="2" min="1" step="1"
+                        <input type="number" id="default-weight" value="2" step="any"
                                class="input-box w-full text-center">
                     </div>
                     <div>
@@ -127,7 +137,7 @@
                         <table id="weights-table" class="w-full border-collapse border border-gray-700">
                             <thead>
                                 <tr class="bg-gray-700">
-                                    <th class="table-cell">Value</th>
+                                    <th class="table-cell">Number</th>
                                     <th class="table-cell">Weight</th>
                                     <th class="table-cell w-10"></th>
                                 </tr>
@@ -152,6 +162,10 @@
                     </div>
 
                     <div class="space-y-4">
+                         <div id="result-error-div" class="flex justify-between" hidden>
+                            <span id="result-error-label" hidden>Error:</span>
+                            <span id="result-error" class="font-mono" hidden>-</span>
+                        </div>
                         <div class="flex justify-between">
                             <span>Expected Value:</span>
                             <span id="ev-value" class="font-mono">-</span>

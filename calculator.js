@@ -27,7 +27,8 @@ function getHeight(order, value) {
             return i;
         }
     }
-    throw new Error("Value not found in order");
+
+    throw new Error(`Value ${value} not found in order`);
 }
 
 // Game-specific order generators
@@ -142,6 +143,14 @@ function inverseQQTransform(displayValue, bound) {
     return result;
 }
 
+function inverseQQTransformMulti(values, bound) {
+    const result = new Set();
+    values.forEach(value => {
+        inverseQQTransform(value, bound).forEach(x => result.add(x));
+    });
+    return result;
+}
+
 function transformValue(value, type) {
     switch (type) {
         case 'xeme':
@@ -172,12 +181,12 @@ function inverseTransform(displayValue, bound, type) {
 class WeightManager {
     constructor() {
         this.weights = new Map();
-        this.defaultWeight = 2;
         this.setDefaultWeights();
     }
 
     setDefaultWeights() {
         this.weights.clear();
+        this.defaultWeight = 2;
     }
 
     getWeight(rawValue, transformType) {
@@ -207,7 +216,6 @@ class WeightManager {
 
     loadPreset(game) {
         this.setDefaultWeights();
-        this.defaultWeight = 2;
         switch (game) {
             case 'reme':
                 this.weights.set(0, 3);
@@ -234,8 +242,9 @@ class WeightManager {
             return;
         }
 
+        // TODO: Make this check actually check contents of orders and weights instead of just gaslighting with size
         const remeMatch = this.weights.size === 1 && 
-            this.weights.get(0) === 3;
+            this.weights.get(0) === 3 && !this.weights.has(1);
         const jemeMatch = this.weights.size === 2 && 
             this.weights.get(0) === 5 && this.weights.get(1) === 4;
         const lemeMatch = this.weights.size === 2 && 
@@ -312,7 +321,6 @@ function formatOrder(order, transformType, base) {
 }
 
 // Game presets
-// Game presets
 const gamePresets = {
     reme: {
         player: () => makeRemePlayerOrder(BOUND),
@@ -340,7 +348,7 @@ class OrdersManager {
         this.tbody = document.getElementById('orders-body');
         this.setupSortable();
         this.setupButtons();
-        this.transformType = 'xeme'; // Default transform type
+        this.transformType = 'xeme'; // Default transform type, otherwise qq
     }
 
     setupSortable() {
@@ -401,18 +409,32 @@ class OrdersManager {
         hostInput.addEventListener('input', () => this.updateOrders());
     }
 
+    // Warning: returns in current transformation type
     getOrderFromInputs() {
         const playerOrder = [];
         const hostOrder = [];
         
         Array.from(this.tbody.children).forEach(row => {
-            const playerSet = new Set(this.parseInput(row.querySelector('.player-set').value));
-            const hostSet = new Set(this.parseInput(row.querySelector('.host-set').value));
+            let playerSet = this.parseInput(row.querySelector('.player-set').value);
+            let hostSet = this.parseInput(row.querySelector('.host-set').value);
             
+            if (this.transformType == 'xeme') {
+                playerSet = inverseXemmifyMulti(playerSet, BOUND, BASE);
+                hostSet = inverseXemmifyMulti(hostSet, BOUND, BASE);
+            }
+            else if (this.transformType == 'qq') {
+                playerSet = inverseQQTransformMulti(playerSet, BOUND);
+                hostSet = inverseQQTransformMulti(playerSet, BOUND);
+            }
+            else { //
+                playerSet = new Set(playerSet);
+                hostSet = new Set(hostSet);
+            }
+
             playerOrder.push(playerSet);
             hostOrder.push(hostSet);
         });
-        
+
         return { playerOrder, hostOrder };
     }
 
@@ -426,8 +448,10 @@ class OrdersManager {
 
     updateOrders() {
         const { playerOrder, hostOrder } = this.getOrderFromInputs();
+
         this.playerOrder = playerOrder;
         this.hostOrder = hostOrder;
+        this.onUpdateConfig();
         this.onOrdersChanged();
         window.weightManager.checkPresetMatch(); // Update status when orders change
     }
@@ -459,17 +483,22 @@ class OrdersManager {
         
         this.playerOrder = playerOrder;
         this.hostOrder = hostOrder;
+        this.onUpdateConfig();
         this.onOrdersChanged();
     }
 
-    onOrdersChanged = () => {
+    onUpdateConfig = () => {
         // Save config on orders change
         const config = getConfiguration();
         const params = new URLSearchParams();
         params.set('config', JSON.stringify(config));
         
         const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-        history.replaceState(null, '', url);
+        //history.replaceState(null, '', url);
+    }
+
+    onOrdersChanged = () => {
+        // This will be set from outside
     }
 }
 
@@ -492,45 +521,40 @@ class WeightsTable {
 
     render() {
         this.tbody.innerHTML = '';
-        // Only show non-default weights
         for (const [value, weight] of this.weightManager.weights.entries()) {
-            if (weight !== this.weightManager.defaultWeight) {
-                const tr = document.createElement('tr');
-                tr.className = 'transition-colors hover:bg-gray-700/50';
-                
-                tr.innerHTML = `
-                    <td class="table-cell text-center">${value}</td>
-                    <td class="table-cell">
-                        <input type="number" value="${weight}" min="1" step="1"
-                               class="input-box w-full text-center weight-input" 
-                               data-value="${value}">
-                    </td>
-                    <td class="table-cell text-center">
-                        <button class="text-red-500 hover:text-red-400 transition-colors delete-weight">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </td>
-                `;
-                
-                const input = tr.querySelector('.weight-input');
-                input.addEventListener('input', () => {
-                    const newWeight = parseInt(input.value) || this.weightManager.defaultWeight;
-                    this.weightManager.setWeight(value, newWeight);
-                    if (newWeight === this.weightManager.defaultWeight) {
-                        this.render();
-                    }
-                    this.onWeightsChanged();
-                });
-                
-                const deleteBtn = tr.querySelector('.delete-weight');
-                deleteBtn.addEventListener('click', () => {
-                    this.weightManager.setWeight(value, this.weightManager.defaultWeight);
-                    this.render();
-                    this.onWeightsChanged();
-                });
-                
-                this.tbody.appendChild(tr);
-            }
+            const tr = document.createElement('tr');
+            tr.className = 'transition-colors hover:bg-gray-700/50';
+            
+            tr.innerHTML = `
+                <td class="table-cell text-center">${value}</td>
+                <td class="table-cell">
+                    <input type="number" value="${weight}" step="any"
+                            class="input-box w-full text-center weight-input" 
+                            data-value="${value}">
+                </td>
+                <td class="table-cell text-center">
+                    <button class="text-red-500 hover:text-red-400 transition-colors delete-weight">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            `;
+            
+            const input = tr.querySelector('.weight-input');
+            input.addEventListener('input', () => {
+                const newWeight = parseFloat(input.value) || this.weightManager.defaultWeight;
+                this.weightManager.setWeight(value, newWeight);
+                this.render();
+                this.onWeightsChanged();
+            });
+            
+            const deleteBtn = tr.querySelector('.delete-weight');
+            deleteBtn.addEventListener('click', () => {
+                this.weightManager.setWeight(value, this.weightManager.defaultWeight);
+                this.render();
+                this.onWeightsChanged();
+            });
+            
+            this.tbody.appendChild(tr);
         }
 
         // Add option to add new weight
@@ -553,7 +577,7 @@ class WeightsTable {
                            class="input-box w-full text-center value-input">
                 </td>
                 <td class="table-cell">
-                    <input type="number" value="${this.weightManager.defaultWeight + 1}" min="1" step="1"
+                    <input type="number" value="${this.weightManager.defaultWeight}" step="any"
                            class="input-box w-full text-center weight-input">
                 </td>
                 <td class="table-cell text-center">
@@ -569,7 +593,7 @@ class WeightsTable {
             
             const updateWeight = () => {
                 const value = parseInt(valueInput.value);
-                const weight = parseInt(weightInput.value) || this.weightManager.defaultWeight;
+                const weight = parseFloat(weightInput.value) || this.weightManager.defaultWeight;
                 if (!isNaN(value) && value >= 0 && value <= 9) {
                     this.weightManager.weights.set(value, weight);
                     this.onWeightsChanged();
@@ -632,6 +656,26 @@ class ResultsDisplay {
         document.getElementById('ev-value').textContent = roundedEv.toFixed(4);
         document.getElementById('rtp-value').textContent = rtp;
         document.getElementById('edge-value').textContent = (edge * 100).toFixed(2) + '%';
+
+        // Hide error elements
+        document.getElementById('result-error-div').hidden = true;
+        document.getElementById('result-error-label').hidden = true;
+        document.getElementById('result-error').hidden = true;
+    }
+
+    error(ev) {
+        document.getElementById('ev-value').textContent = '???';
+        document.getElementById('rtp-value').textContent = '???';
+        document.getElementById('edge-value').textContent = '???';
+
+        // Unhide elements
+
+        document.getElementById('result-error-div').hidden = false;
+        document.getElementById('result-error-label').hidden = false;
+        
+        const errorElem = document.getElementById('result-error');
+        errorElem.hidden = false;
+        errorElem.textContent = ev.message;
     }
 
     onRoundsChanged = () => {
@@ -681,8 +725,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ordersManager = new OrdersManager(weightManager);
     const weightsTable = new WeightsTable(weightManager);
     const resultsDisplay = new ResultsDisplay();
-    const transformSelect = document.getElementById('transform-type');
-    const displaySelect = document.getElementById('display-type');
+    const transformSelect = document.getElementById('transform-type'); // Xeme or QQ
+    const displaySelect = document.getElementById('display-type'); // Fixed or raw
     
     // Make instances available globally for configuration sharing
     window.weightManager = weightManager;
@@ -696,6 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsDisplay.update(ev);
         } catch (e) {
             console.error('Calculation error:', e);
+            resultsDisplay.error(e);
         }
     }
     
@@ -705,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resultsDisplay.onRoundsChanged = updateCalculations;
     transformSelect.addEventListener('change', () => {
         ordersManager.transformType = transformSelect.value;
-        if (displaySelect.value === 'fixed') {
+        if (displaySelect.value === 'raw') {
             updateDisplayMode();
         }
         updateCalculations();
@@ -717,7 +762,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.player-set, .host-set').forEach(input => {
             const isPlayer = input.classList.contains('player-set');
             const height = parseInt(input.closest('tr').cells[0].textContent);
-            const orders = ordersManager.getOrderFromInputs();
             const set = isPlayer ? ordersManager.playerOrder[height] : ordersManager.hostOrder[height];
 
             if (isRaw) {

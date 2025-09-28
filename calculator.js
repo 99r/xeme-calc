@@ -846,16 +846,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const height = parseInt(input.closest('tr').cells[0].textContent);
             const set = isPlayer ? ordersManager.playerOrder[height] : ordersManager.hostOrder[height];
 
-            if (isRaw) {
+            if (isRaw && set) {
                 // Show raw values
                 input.value = Array.from(set).sort((a, b) => a - b).join(',');
-            } else {
+            } else if (set){
                 // Show transformed values
                 const transformedValues = Array.from(set)
                     .map(v => transformValue(v, transformSelect.value))
                     .filter((v, i, arr) => arr.indexOf(v) === i) // Remove duplicates
                     .sort((a, b) => a - b);
                 input.value = transformedValues.join(',');
+            }
+            else {
+                input.value = '';
             }
             
             // Make readonly in raw mode

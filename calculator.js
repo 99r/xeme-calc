@@ -429,6 +429,7 @@ class OrdersManager {
         this.playerOrder = playerOrder;
         this.hostOrder = hostOrder;
         this.onOrdersChanged();
+        window.weightManager.checkPresetMatch(); // Update status when orders change
     }
 
     setOrders(playerOrder, hostOrder) {
@@ -462,7 +463,13 @@ class OrdersManager {
     }
 
     onOrdersChanged = () => {
-        // This will be set from outside
+        // Save config on orders change
+        const config = getConfiguration();
+        const params = new URLSearchParams();
+        params.set('config', JSON.stringify(config));
+        
+        const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+        history.replaceState(null, '', url);
     }
 }
 
@@ -526,21 +533,61 @@ class WeightsTable {
             }
         }
 
-        // Add option to add new exception
+        // Add option to add new weight
         const addRow = document.createElement('tr');
         addRow.innerHTML = `
             <td colspan="3" class="table-cell text-center">
                 <button class="text-primary hover:text-primary/80 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Add Exception
+                    <i class="fas fa-plus mr-2"></i>Add Extra Weight
                 </button>
             </td>
         `;
         
         addRow.querySelector('button').addEventListener('click', () => {
-            const value = this.weightManager.weights.size;
-            this.weightManager.setWeight(value, this.weightManager.defaultWeight + 1);
-            this.render();
-            this.onWeightsChanged();
+            const tr = document.createElement('tr');
+            tr.className = 'transition-colors hover:bg-gray-700/50';
+            
+            tr.innerHTML = `
+                <td class="table-cell">
+                    <input type="number" value="0" min="0" max="9" step="1"
+                           class="input-box w-full text-center value-input">
+                </td>
+                <td class="table-cell">
+                    <input type="number" value="${this.weightManager.defaultWeight + 1}" min="1" step="1"
+                           class="input-box w-full text-center weight-input">
+                </td>
+                <td class="table-cell text-center">
+                    <button class="text-red-500 hover:text-red-400 transition-colors delete-weight">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            `;
+            
+            const valueInput = tr.querySelector('.value-input');
+            const weightInput = tr.querySelector('.weight-input');
+            const deleteBtn = tr.querySelector('.delete-weight');
+            
+            const updateWeight = () => {
+                const value = parseInt(valueInput.value);
+                const weight = parseInt(weightInput.value) || this.weightManager.defaultWeight;
+                if (!isNaN(value) && value >= 0 && value <= 9) {
+                    this.weightManager.weights.set(value, weight);
+                    this.onWeightsChanged();
+                }
+            };
+            
+            valueInput.addEventListener('input', updateWeight);
+            weightInput.addEventListener('input', updateWeight);
+            deleteBtn.addEventListener('click', () => {
+                tr.remove();
+                const value = parseInt(valueInput.value);
+                if (!isNaN(value)) {
+                    this.weightManager.weights.delete(value);
+                }
+                this.onWeightsChanged();
+            });
+            
+            this.tbody.insertBefore(tr, addRow);
         });
         
         this.tbody.appendChild(addRow);
@@ -579,9 +626,10 @@ class ResultsDisplay {
     update(ev) {
         const rounds = parseInt(this.input.value) || 1;
         const edge = getEdge(ev, rounds);
-        const rtp = (ev * 100).toFixed(2) + '%';
+        const roundedEv = Math.pow(ev, rounds);
+        const rtp = (roundedEv * 100).toFixed(2) + '%';
         
-        document.getElementById('ev-value').textContent = ev.toFixed(4);
+        document.getElementById('ev-value').textContent = roundedEv.toFixed(4);
         document.getElementById('rtp-value').textContent = rtp;
         document.getElementById('edge-value').textContent = (edge * 100).toFixed(2) + '%';
     }
@@ -657,24 +705,40 @@ document.addEventListener('DOMContentLoaded', () => {
     resultsDisplay.onRoundsChanged = updateCalculations;
     transformSelect.addEventListener('change', () => {
         ordersManager.transformType = transformSelect.value;
-        ordersManager.setOrders(ordersManager.playerOrder, ordersManager.hostOrder);
+        if (displaySelect.value === 'fixed') {
+            updateDisplayMode();
+        }
         updateCalculations();
     });
     
     // Handle display mode changes
-    displaySelect.addEventListener('change', () => {
+    function updateDisplayMode() {
         const isRaw = displaySelect.value === 'raw';
         document.querySelectorAll('.player-set, .host-set').forEach(input => {
-            const sets = isRaw ? ordersManager.getOrderFromInputs() : null;
-            if (sets) {
-                // If switching to raw, convert from transformed to raw
-                const isPlayer = input.classList.contains('player-set');
-                const height = parseInt(input.closest('tr').cells[0].textContent);
-                const set = isPlayer ? sets.playerOrder[height] : sets.hostOrder[height];
+            const isPlayer = input.classList.contains('player-set');
+            const height = parseInt(input.closest('tr').cells[0].textContent);
+            const orders = ordersManager.getOrderFromInputs();
+            const set = isPlayer ? ordersManager.playerOrder[height] : ordersManager.hostOrder[height];
+
+            if (isRaw) {
+                // Show raw values
                 input.value = Array.from(set).sort((a, b) => a - b).join(',');
+            } else {
+                // Show transformed values
+                const transformedValues = Array.from(set)
+                    .map(v => transformValue(v, transformSelect.value))
+                    .filter((v, i, arr) => arr.indexOf(v) === i) // Remove duplicates
+                    .sort((a, b) => a - b);
+                input.value = transformedValues.join(',');
             }
+            
+            // Make readonly in raw mode
+            input.readOnly = isRaw;
+            input.style.opacity = isRaw ? '0.7' : '1';
         });
-    });
+    }
+    
+    displaySelect.addEventListener('change', updateDisplayMode);
     
     // Handle presets
     const gameSelect = document.getElementById('game-type');

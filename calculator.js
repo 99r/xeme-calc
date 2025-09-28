@@ -568,8 +568,8 @@ class OrdersManager {
         const params = new URLSearchParams();
         params.set('config', JSON.stringify(config));
         
-        const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-        //history.replaceState(null, '', url);
+        const url = `${window.location.href.split('?')[0]}?${params.toString()}`;
+        history.replaceState(null, '', url);
     }
 
     onOrdersChanged = () => {
@@ -887,7 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams();
         params.set('config', JSON.stringify(config));
         
-        const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+        const url = `${window.location.href.split('?')[0]}?${params.toString()}`;
         navigator.clipboard.writeText(url).then(() => {
             const originalText = shareBtn.innerHTML;
             shareBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xeme Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .game-select {
+            margin-bottom: 20px;
+        }
+        .transformation-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #base {
+            padding: 2px 5px;
+        }
+        .orders {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .order {
+            flex: 1;
+        }
+        .results {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .order-input {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Xeme Calculator</h1>
+    
+    <div class="game-select">
+        <label for="game-type">Select Game:</label>
+        <select id="game-type">
+            <option value="reme">REME</option>
+            <option value="jeme">JEME</option>
+            <option value="leme">LEME</option>
+        </select>
+        <button id="load-preset">Load Preset</button>
+
+        <div class="transformation-controls">
+            <label for="transform-type">Value Display:</label>
+            <select id="transform-type">
+                <option value="xemmify">Xemmified (mod 10)</option>
+                <option value="qq10">QQ10 (base 10)</option>
+                <option value="raw">Raw Numbers (QQ37)</option>
+            </select>
+            <label for="base">Base:</label>
+            <input type="number" id="base" value="10" min="2" max="37" style="width: 60px;">
+        </div>
+    </div>
+
+    <div class="orders">
+        <div class="order">
+            <h3>Player's Order</h3>
+            <textarea id="player-order" class="order-input" placeholder="Enter sets of numbers, one set per line. Example:&#10;2,3,4,5&#10;6&#10;7&#10;8&#10;9&#10;0,1"></textarea>
+        </div>
+        <div class="order">
+            <h3>Host's Order</h3>
+            <textarea id="host-order" class="order-input" placeholder="Enter sets of numbers, one set per line. Example:&#10;&#10;2,3,4,5&#10;6&#10;7&#10;8&#10;9&#10;0,1"></textarea>
+        </div>
+    </div>
+
+    <div class="results">
+        <h3>Results</h3>
+        <p>Expected Value (1 round): <span id="ev-1r">-</span></p>
+        <p>House Edge (1 round): <span id="edge-1r">-</span></p>
+        <p>House Edge (2 rounds): <span id="edge-2r">-</span></p>
+        <p>House Edge (4 rounds): <span id="edge-4r">-</span></p>
+    </div>
+
+    <script src="calculator.js"></script>
+</body>
+</html>

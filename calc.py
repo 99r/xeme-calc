@@ -16,7 +16,7 @@ def get_height(order: Order, value: int):
 def xemmify(value: int, base: int = 10) -> int:
     return ((value % base) + floor(value / base)) % base
 
-inv_xm_cache: dict[(int, int, int), set[int]] = {}
+inv_xm_cache: dict[tuple[int, int, int], set[int]] = {}
 def inverse_xemmify(value: int, bound: int, base: int = 10) -> set[int]:
     global inv_xm_cache
     key = (value, bound, base)
